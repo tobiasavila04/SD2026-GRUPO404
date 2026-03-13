@@ -10,7 +10,7 @@ def clear_items():
     import app.main as main_module
 
     main_module.items.clear()
-    main_module.next_id = 1
+    main_module.next_id = {"value": 1}
     yield
 
 
