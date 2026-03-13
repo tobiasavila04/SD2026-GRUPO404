@@ -20,7 +20,7 @@ client = TestClient(app)
 def test_root():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "ESTE MENSAJE VA A FALLAR"}
+    assert response.json() == {"message": "SD2026-GRUPO404 API is running"}
 
 
 def test_health():
