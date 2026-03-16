@@ -38,7 +38,12 @@ def main():
             try:
                 with conn:
                     handle_connection(conn, addr)
-            except (ConnectionResetError, BrokenPipeError, ConnectionError, OSError) as e:
+            except (
+                ConnectionResetError,
+                BrokenPipeError,
+                ConnectionError,
+                OSError,
+            ) as e:
                 print(f"[B] A se desconecto abruptamente: {e}")
             finally:
                 print("[B] Conexion con A cerrada. Esperando nueva conexion...\n")

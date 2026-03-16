@@ -30,7 +30,7 @@ TCP_PORT = int(os.getenv("TCP_PORT", "9000"))
 # ---------------------------------------------------------------------------
 
 _start_time = time.time()
-_registry: list[dict] = []   # [{host, port, registered_at}]
+_registry: list[dict] = []  # [{host, port, registered_at}]
 _registry_lock = threading.Lock()
 
 
@@ -38,13 +38,16 @@ _registry_lock = threading.Lock()
 # Helpers JSON/TCP (mismo framing que HIT #5)
 # ---------------------------------------------------------------------------
 
+
 def _send_json(sock: socket.socket, payload: dict) -> None:
     import json
+
     sock.sendall((json.dumps(payload) + "\n").encode())
 
 
 def _recv_json(sock: socket.socket) -> dict:
     import json
+
     buf = b""
     while b"\n" not in buf:
         chunk = sock.recv(4096)
@@ -58,8 +61,8 @@ def _recv_json(sock: socket.socket) -> dict:
 # Servidor TCP de registro
 # ---------------------------------------------------------------------------
 
+
 def _handle_registration(conn: socket.socket, addr: tuple) -> None:
-    import json
     with conn:
         msg = _recv_json(conn)
         if msg.get("type") != "register":
@@ -73,11 +76,18 @@ def _handle_registration(conn: socket.socket, addr: tuple) -> None:
         }
 
         with _registry_lock:
-            peers = [n for n in _registry if n["host"] != node["host"] or n["port"] != node["port"]]
+            peers = [
+                n
+                for n in _registry
+                if n["host"] != node["host"] or n["port"] != node["port"]
+            ]
             _registry.append(node)
             peers_snapshot = list(peers)
 
-        print(f"[D-TCP] Nodo registrado: {node['host']}:{node['port']} — total: {len(_registry)}")
+        print(
+            f"[D-TCP] Nodo registrado: {node['host']}:{node['port']} "
+            f"— total: {len(_registry)}"
+        )
         _send_json(conn, {"type": "registered", "peers": peers_snapshot})
 
 

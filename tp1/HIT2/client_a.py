@@ -33,7 +33,12 @@ def main():
                 print("[A] Conexion establecida.")
                 saludar(sock)
                 print("[A] Intercambio completado. Esperando para reconectar...\n")
-        except (ConnectionRefusedError, ConnectionResetError, ConnectionError, OSError) as e:
+        except (
+            ConnectionRefusedError,
+            ConnectionResetError,
+            ConnectionError,
+            OSError,
+        ) as e:
             print(f"[A] Error de conexion: {e}")
             print(f"[A] Reintentando en {RECONNECT_DELAY} segundos...\n")
 

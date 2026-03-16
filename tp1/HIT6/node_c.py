@@ -22,6 +22,7 @@ RECONNECT_DELAY = 2
 # Helpers JSON/TCP (mismo framing que HIT #5)
 # ---------------------------------------------------------------------------
 
+
 def send_json(sock: socket.socket, payload: dict) -> None:
     """Serializa payload como JSON y lo envia terminado en newline."""
     sock.sendall((json.dumps(payload) + "\n").encode())
@@ -41,6 +42,7 @@ def recv_json(sock: socket.socket) -> dict:
 # ---------------------------------------------------------------------------
 # Servidor de saludos (thread)
 # ---------------------------------------------------------------------------
+
 
 def server_thread(listen_port: int) -> None:
     """Escucha saludos entrantes de otros nodos C."""
@@ -81,15 +83,23 @@ def _handle_greeting(conn: socket.socket, addr: tuple, own_port: int) -> None:
 # Registro en D y saludo a peers
 # ---------------------------------------------------------------------------
 
-def register_and_greet(registry_host: str, registry_port: int, own_host: str, own_port: int) -> None:
+
+def register_and_greet(
+    registry_host: str, registry_port: int, own_host: str, own_port: int
+) -> None:
     """Se registra en D y saluda a todos los peers que D devuelve."""
     attempt = 1
     while True:
-        print(f"[C] Intento #{attempt} registrandose en D ({registry_host}:{registry_port})...")
+        print(
+            f"[C] Intento #{attempt} registrandose en D "
+            f"({registry_host}:{registry_port})..."
+        )
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((registry_host, registry_port))
-                send_json(sock, {"type": "register", "host": own_host, "port": own_port})
+                send_json(
+                    sock, {"type": "register", "host": own_host, "port": own_port}
+                )
                 response = recv_json(sock)
 
             peers = response.get("peers", [])
@@ -99,7 +109,9 @@ def register_and_greet(registry_host: str, registry_port: int, own_host: str, ow
             return
 
         except (ConnectionRefusedError, ConnectionResetError, OSError) as e:
-            print(f"[C] Error al registrarse: {e}. Reintentando en {RECONNECT_DELAY}s...")
+            print(
+                f"[C] Error al registrarse: {e}. Reintentando en {RECONNECT_DELAY}s..."
+            )
             attempt += 1
             time.sleep(RECONNECT_DELAY)
 
@@ -126,6 +138,7 @@ def _greet_peer(host: str, port: int, own_port: int) -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def _get_own_ip() -> str:
     """Obtiene la IP local visible (fallback a 127.0.0.1)."""
     try:
@@ -139,8 +152,14 @@ def _get_own_ip() -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Nodo C con registro en D (HIT #6)")
     parser.add_argument("--registry-host", required=True, help="IP del nodo D")
-    parser.add_argument("--registry-port", type=int, required=True, help="Puerto TCP de D")
-    parser.add_argument("--own-host", default=None, help="IP propia visible por D (auto-detectada si no se indica)")
+    parser.add_argument(
+        "--registry-port", type=int, required=True, help="Puerto TCP de D"
+    )
+    parser.add_argument(
+        "--own-host",
+        default=None,
+        help="IP propia visible por D (auto-detectada si no se indica)",
+    )
     args = parser.parse_args()
 
     own_host = args.own_host or _get_own_ip()

@@ -23,6 +23,7 @@ RECONNECT_DELAY = 2
 # Helpers de serialización / deserialización
 # ---------------------------------------------------------------------------
 
+
 def send_json(sock, payload: dict) -> None:
     """Serializa payload como JSON y lo envía terminado en newline."""
     raw = json.dumps(payload) + "\n"
@@ -64,6 +65,7 @@ def make_response(own_port: int, received: dict) -> dict:
 # Threads
 # ---------------------------------------------------------------------------
 
+
 def server_thread(listen_host: str, listen_port: int) -> None:
     """Escucha conexiones entrantes, deserializa el saludo y responde en JSON."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as srv:
@@ -81,7 +83,12 @@ def server_thread(listen_host: str, listen_port: int) -> None:
                     resp = make_response(listen_port, msg)
                     send_json(conn, resp)
                     print(f"[C-SERVER] JSON enviado a {addr}: {json.dumps(resp)}")
-            except (ConnectionResetError, BrokenPipeError, ConnectionError, OSError) as e:
+            except (
+                ConnectionResetError,
+                BrokenPipeError,
+                ConnectionError,
+                OSError,
+            ) as e:
                 print(f"[C-SERVER] Error con cliente: {e}")
 
 
@@ -89,7 +96,9 @@ def client_thread(remote_host: str, remote_port: int, own_port: int) -> None:
     """Se conecta al otro C, envía saludo JSON y recibe respuesta JSON."""
     attempt = 1
     while True:
-        print(f"[C-CLIENT] Intento #{attempt} conectando a {remote_host}:{remote_port}...")
+        print(
+            f"[C-CLIENT] Intento #{attempt} conectando a {remote_host}:{remote_port}..."
+        )
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((remote_host, remote_port))
@@ -108,6 +117,7 @@ def client_thread(remote_host: str, remote_port: int, own_port: int) -> None:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(description="Nodo C con mensajes JSON (HIT #5)")

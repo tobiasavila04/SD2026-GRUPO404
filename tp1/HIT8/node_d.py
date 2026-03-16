@@ -12,8 +12,8 @@ Uso:
 
 import os
 import sys
-import time
 import threading
+import time
 from concurrent import futures
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,10 +22,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import grpc
-from fastapi import FastAPI
-
 import sd2026_pb2
 import sd2026_pb2_grpc
+from fastapi import FastAPI
 
 # ---------------------------------------------------------------------------
 # Configuracion
@@ -45,6 +44,7 @@ _registry_lock = threading.Lock()
 # Implementacion gRPC — RegistryService
 # ---------------------------------------------------------------------------
 
+
 class RegistryServicer(sd2026_pb2_grpc.RegistryServiceServicer):
     """Implementa Register, Health y GetNodes sobre gRPC."""
 
@@ -62,7 +62,8 @@ class RegistryServicer(sd2026_pb2_grpc.RegistryServiceServicer):
             if not already:
                 _registry.append(node)
             peers_snapshot = [
-                n for n in _registry
+                n
+                for n in _registry
                 if not (n["host"] == node["host"] and n["port"] == node["port"])
             ]
 
@@ -113,6 +114,7 @@ class RegistryServicer(sd2026_pb2_grpc.RegistryServiceServicer):
 # ---------------------------------------------------------------------------
 # Arrancar servidor gRPC en background
 # ---------------------------------------------------------------------------
+
 
 def _start_grpc_server() -> None:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

@@ -13,8 +13,8 @@ Uso:
 
 import argparse
 import sys
-import time
 import threading
+import time
 from concurrent import futures
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,7 +22,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import grpc
-
 import sd2026_pb2
 import sd2026_pb2_grpc
 
@@ -32,6 +31,7 @@ RECONNECT_DELAY = 2
 # ---------------------------------------------------------------------------
 # Implementacion gRPC — GreetingService
 # ---------------------------------------------------------------------------
+
 
 class GreetingServicer(sd2026_pb2_grpc.GreetingServiceServicer):
     """Recibe saludos de otros nodos C y responde."""
@@ -68,6 +68,7 @@ def start_greeting_server(own_port: int) -> int:
 # ---------------------------------------------------------------------------
 # Registro en D y saludo a peers
 # ---------------------------------------------------------------------------
+
 
 def register_and_greet(
     registry_host: str,
@@ -130,8 +131,10 @@ def _greet_peer(host: str, port: int, own_port: int) -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def _get_own_ip() -> str:
     import socket
+
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect(("8.8.8.8", 80))

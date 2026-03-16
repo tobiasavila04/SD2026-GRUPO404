@@ -24,7 +24,7 @@ import os
 import socket
 import threading
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -44,9 +44,9 @@ INSCRIPCIONES_FILE = Path(os.getenv("INSCRIPCIONES_FILE", "inscripciones.json"))
 _start_time = time.time()
 _lock = threading.Lock()
 
-_current_window: list[dict] = []   # nodos activos ahora
-_next_window: list[dict] = []      # nodos para la proxima ventana
-_current_window_start: str = ""    # ISO timestamp de inicio de ventana actual
+_current_window: list[dict] = []  # nodos activos ahora
+_next_window: list[dict] = []  # nodos para la proxima ventana
+_current_window_start: str = ""  # ISO timestamp de inicio de ventana actual
 
 
 def _next_minute_iso() -> str:
@@ -60,6 +60,7 @@ def _next_minute_iso() -> str:
 # Persistencia
 # ---------------------------------------------------------------------------
 
+
 def _load_history() -> list[dict]:
     if INSCRIPCIONES_FILE.exists():
         with open(INSCRIPCIONES_FILE) as f:
@@ -70,12 +71,14 @@ def _load_history() -> list[dict]:
 def _save_window(window_start: str, nodes: list[dict]) -> None:
     """Agrega una entrada de ventana al archivo JSON de inscripciones."""
     history = _load_history()
-    history.append({
-        "window_start": window_start,
-        "window_end": _next_minute_iso(),
-        "node_count": len(nodes),
-        "nodes": nodes,
-    })
+    history.append(
+        {
+            "window_start": window_start,
+            "window_end": _next_minute_iso(),
+            "node_count": len(nodes),
+            "nodes": nodes,
+        }
+    )
     with open(INSCRIPCIONES_FILE, "w") as f:
         json.dump(history, f, indent=2)
     print(f"[D] Ventana guardada en {INSCRIPCIONES_FILE}: {len(nodes)} nodo(s)")
@@ -84,6 +87,7 @@ def _save_window(window_start: str, nodes: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 # Gestor de ventanas (thread)
 # ---------------------------------------------------------------------------
+
 
 def _window_manager() -> None:
     """Cada segundo verifica si cambio el minuto. Si cambio, rota ventanas."""
@@ -110,13 +114,16 @@ def _window_manager() -> None:
 
 
 # Inicializar timestamp de ventana actual al arrancar
-_current_window_start = datetime.now(timezone.utc).replace(second=0, microsecond=0).isoformat()
+_current_window_start = (
+    datetime.now(timezone.utc).replace(second=0, microsecond=0).isoformat()
+)
 
 threading.Thread(target=_window_manager, daemon=True, name="window-manager").start()
 
 # ---------------------------------------------------------------------------
 # Helpers JSON/TCP
 # ---------------------------------------------------------------------------
+
 
 def _send_json(sock: socket.socket, payload: dict) -> None:
     sock.sendall((json.dumps(payload) + "\n").encode())
@@ -135,6 +142,7 @@ def _recv_json(sock: socket.socket) -> dict:
 # ---------------------------------------------------------------------------
 # Servidor TCP de inscripciones
 # ---------------------------------------------------------------------------
+
 
 def _handle_registration(conn: socket.socket, addr: tuple) -> None:
     with conn:
@@ -167,11 +175,14 @@ def _handle_registration(conn: socket.socket, addr: tuple) -> None:
             f"— siguiente ventana: {len(_next_window)} nodo(s)"
         )
 
-        _send_json(conn, {
-            "type": "registered",
-            "assigned_window": next_window_start,
-            "peers": current_peers,   # peers de la ventana ACTUAL (no la futura)
-        })
+        _send_json(
+            conn,
+            {
+                "type": "registered",
+                "assigned_window": next_window_start,
+                "peers": current_peers,  # peers de la ventana ACTUAL (no la futura)
+            },
+        )
 
 
 def _tcp_server() -> None:
@@ -198,7 +209,9 @@ threading.Thread(target=_tcp_server, daemon=True, name="tcp-registry").start()
 # FastAPI — endpoints HTTP
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="SD2026-GRUPO404 Node D — Sistema de Inscripciones", version="2.0.0")
+app = FastAPI(
+    title="SD2026-GRUPO404 Node D — Sistema de Inscripciones", version="2.0.0"
+)
 
 
 @app.get("/")
