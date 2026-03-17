@@ -89,9 +89,21 @@ def _save_window(window_start: str, nodes: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _rotate_windows(now: datetime) -> None:
+    """Rota ventanas. Debe llamarse con _lock adquirido."""
+    global _current_window, _next_window, _current_window_start
+    _save_window(_current_window_start, _current_window)
+    _current_window = list(_next_window)
+    _next_window = []
+    _current_window_start = now.replace(second=0, microsecond=0).isoformat()
+    print(
+        f"[D] Nueva ventana activa desde {_current_window_start} "
+        f"con {len(_current_window)} nodo(s)"
+    )
+
+
 def _window_manager() -> None:
     """Cada segundo verifica si cambio el minuto. Si cambio, rota ventanas."""
-    global _current_window, _next_window, _current_window_start
     last_minute = datetime.now(timezone.utc).minute
 
     while True:
@@ -100,17 +112,7 @@ def _window_manager() -> None:
         if now.minute != last_minute:
             last_minute = now.minute
             with _lock:
-                # Persistir ventana que acaba de cerrar
-                _save_window(_current_window_start, _current_window)
-                # Rotar
-                _current_window = list(_next_window)
-                _next_window = []
-                _current_window_start = now.replace(second=0, microsecond=0).isoformat()
-
-            print(
-                f"[D] Nueva ventana activa desde {_current_window_start} "
-                f"con {len(_current_window)} nodo(s)"
-            )
+                _rotate_windows(now)
 
 
 # Inicializar timestamp de ventana actual al arrancar
@@ -144,10 +146,29 @@ def _recv_json(sock: socket.socket) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _remove_node(host: str, port: int) -> None:
+    """Elimina un nodo de ambas ventanas. Debe llamarse con _lock adquirido."""
+    _current_window[:] = [
+        n for n in _current_window if not (n["host"] == host and n["port"] == port)
+    ]
+    _next_window[:] = [
+        n for n in _next_window if not (n["host"] == host and n["port"] == port)
+    ]
+
+
 def _handle_registration(conn: socket.socket, addr: tuple) -> None:
     with conn:
         msg = _recv_json(conn)
-        if msg.get("type") != "register":
+        msg_type = msg.get("type")
+
+        if msg_type == "unregister":
+            host, port = msg.get("host"), msg.get("port")
+            with _lock:
+                _remove_node(host, port)
+            print(f"[D-TCP] Nodo desconectado: {host}:{port}")
+            return
+
+        if msg_type != "register":
             print(f"[D-TCP] Mensaje inesperado de {addr}: {msg}")
             return
 
@@ -158,6 +179,11 @@ def _handle_registration(conn: socket.socket, addr: tuple) -> None:
         }
 
         with _lock:
+            now = datetime.now(timezone.utc)
+            current_start = datetime.fromisoformat(_current_window_start)
+            if now >= current_start + timedelta(minutes=1):
+                _rotate_windows(now)
+
             # Evitar duplicados en next_window
             already = any(
                 n["host"] == node["host"] and n["port"] == node["port"]
@@ -168,11 +194,12 @@ def _handle_registration(conn: socket.socket, addr: tuple) -> None:
 
             current_peers = list(_current_window)
             next_window_start = _next_minute_iso()
+            next_window_count = len(_next_window)
 
         print(
             f"[D-TCP] Inscripto para {next_window_start}: "
             f"{node['host']}:{node['port']} "
-            f"— siguiente ventana: {len(_next_window)} nodo(s)"
+            f"— siguiente ventana: {next_window_count} nodo(s)"
         )
 
         _send_json(
