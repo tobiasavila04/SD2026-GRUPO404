@@ -84,6 +84,17 @@ class RegistryServicer(sd2026_pb2_grpc.RegistryServiceServicer):
             ],
         )
 
+    def Unregister(self, request, context):
+        host, port = request.host, request.port
+        with _registry_lock:
+            before = len(_registry)
+            _registry[:] = [
+                n for n in _registry if not (n["host"] == host and n["port"] == port)
+            ]
+            removed = len(_registry) < before
+        print(f"[D-gRPC] Desconectado {host}:{port} — total: {len(_registry)}")
+        return sd2026_pb2.UnregisterResponse(removed=removed)
+
     def Health(self, request, context):
         with _registry_lock:
             count = len(_registry)

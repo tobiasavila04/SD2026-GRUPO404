@@ -51,14 +51,14 @@ class GreetingServicer(sd2026_pb2_grpc.GreetingServiceServicer):
         )
 
 
-def start_greeting_server(own_port: int) -> int:
+def start_greeting_server() -> int:
     """Arranca el servidor gRPC de saludos. Retorna el puerto asignado."""
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    sd2026_pb2_grpc.add_GreetingServiceServicer_to_server(
-        GreetingServicer(own_port), server
-    )
-    # Puerto 0 → el SO asigna uno libre
+    # Obtener el puerto real antes de crear el servicer
     assigned_port = server.add_insecure_port("[::]:0")
+    sd2026_pb2_grpc.add_GreetingServiceServicer_to_server(
+        GreetingServicer(assigned_port), server
+    )
     server.start()
     print(f"[C-SERVER] Servidor gRPC de saludos en puerto {assigned_port}")
     threading.Thread(target=server.wait_for_termination, daemon=True).start()
@@ -132,6 +132,22 @@ def _greet_peer(host: str, port: int, own_port: int) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _unregister(
+    registry_host: str, registry_grpc_port: int, own_host: str, own_grpc_port: int
+) -> None:
+    try:
+        channel = grpc.insecure_channel(f"{registry_host}:{registry_grpc_port}")
+        stub = sd2026_pb2_grpc.RegistryServiceStub(channel)
+        stub.Unregister(
+            sd2026_pb2.UnregisterRequest(host=own_host, port=own_grpc_port),
+            timeout=3,
+        )
+        channel.close()
+        print("[C] Desinscripto de D.")
+    except grpc.RpcError:
+        pass
+
+
 def _get_own_ip() -> str:
     import socket
 
@@ -150,10 +166,15 @@ def main() -> None:
     parser.add_argument("--own-host", default=None)
     args = parser.parse_args()
 
-    own_host = args.own_host or _get_own_ip()
+    if args.own_host:
+        own_host = args.own_host
+    elif args.registry_host in ("127.0.0.1", "localhost"):
+        own_host = "127.0.0.1"
+    else:
+        own_host = _get_own_ip()
 
     # Arrancar servidor gRPC de saludos (puerto asignado por el SO)
-    own_grpc_port = start_greeting_server(0)
+    own_grpc_port = start_greeting_server()
 
     print(f"[C] Iniciando en {own_host}:{own_grpc_port}")
 
@@ -169,6 +190,9 @@ def main() -> None:
             time.sleep(1)
     except KeyboardInterrupt:
         print("\n[C] Terminando.")
+        _unregister(
+            args.registry_host, args.registry_grpc_port, own_host, own_grpc_port
+        )
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ import json
 import socket
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 RECONNECT_DELAY = 2
 
@@ -45,12 +45,9 @@ def recv_json(sock: socket.socket) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def server_thread(listen_port: int) -> None:
+def server_thread(srv: socket.socket, listen_port: int) -> None:
     """Escucha saludos entrantes de otros nodos C."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as srv:
-        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        srv.bind(("0.0.0.0", listen_port))
-        srv.listen(10)
+    with srv:
         print(f"[C-SERVER] Escuchando en puerto {listen_port}")
         while True:
             try:
@@ -112,8 +109,18 @@ def register_and_greet(
             print(f"[C] Peers en ventana actual: {len(peers)}")
 
             for peer in peers:
+                if peer["host"] == own_host and peer["port"] == own_port:
+                    continue
                 _greet_peer(peer["host"], peer["port"], own_port)
-            return
+
+            window_end = datetime.fromisoformat(assigned) + timedelta(minutes=1)
+            sleep_until = window_end - timedelta(seconds=10)
+            now = datetime.now(timezone.utc)
+            wait = (sleep_until - now).total_seconds()
+            if wait > 0:
+                print(f"[C] Proxima reinscripcion en {wait:.1f}s...")
+                time.sleep(wait)
+            attempt = 1
 
         except (ConnectionRefusedError, ConnectionResetError, OSError) as e:
             print(f"[C] Error: {e}. Reintentando en {RECONNECT_DELAY}s...")
@@ -144,6 +151,19 @@ def _greet_peer(host: str, port: int, own_port: int) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _unregister(
+    registry_host: str, registry_port: int, own_host: str, own_port: int
+) -> None:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(3)
+            sock.connect((registry_host, registry_port))
+            send_json(sock, {"type": "unregister", "host": own_host, "port": own_port})
+            print("[C] Desinscripto de D.")
+    except OSError:
+        pass
+
+
 def _get_own_ip() -> str:
     """Detecta la IP local saliente."""
     try:
@@ -163,16 +183,23 @@ def main() -> None:
     parser.add_argument("--own-host", default=None)
     args = parser.parse_args()
 
-    own_host = args.own_host or _get_own_ip()
+    if args.own_host:
+        own_host = args.own_host
+    elif args.registry_host in ("127.0.0.1", "localhost"):
+        own_host = "127.0.0.1"
+    else:
+        own_host = _get_own_ip()
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tmp:
-        tmp.bind(("0.0.0.0", 0))
-        own_port = tmp.getsockname()[1]
+    srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv_sock.bind(("0.0.0.0", 0))
+    own_port = srv_sock.getsockname()[1]
+    srv_sock.listen(10)
 
     print(f"[C] Iniciando en {own_host}:{own_port}")
 
     threading.Thread(
-        target=server_thread, args=(own_port,), daemon=True, name="c-server"
+        target=server_thread, args=(srv_sock, own_port), daemon=True, name="c-server"
     ).start()
 
     threading.Thread(
@@ -187,6 +214,7 @@ def main() -> None:
             time.sleep(1)
     except KeyboardInterrupt:
         print("\n[C] Terminando.")
+        _unregister(args.registry_host, args.registry_port, own_host, own_port)
 
 
 if __name__ == "__main__":
