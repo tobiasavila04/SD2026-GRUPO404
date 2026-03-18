@@ -111,6 +111,11 @@ class RegistryServiceStub(object):
                 request_serializer=sd2026__pb2.RegisterRequest.SerializeToString,
                 response_deserializer=sd2026__pb2.RegisterResponse.FromString,
                 _registered_method=True)
+        self.Unregister = channel.unary_unary(
+                '/sd2026.RegistryService/Unregister',
+                request_serializer=sd2026__pb2.UnregisterRequest.SerializeToString,
+                response_deserializer=sd2026__pb2.UnregisterResponse.FromString,
+                _registered_method=True)
         self.Health = channel.unary_unary(
                 '/sd2026.RegistryService/Health',
                 request_serializer=sd2026__pb2.HealthRequest.SerializeToString,
@@ -127,6 +132,12 @@ class RegistryServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Register(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Unregister(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -151,6 +162,11 @@ def add_RegistryServiceServicer_to_server(servicer, server):
                     servicer.Register,
                     request_deserializer=sd2026__pb2.RegisterRequest.FromString,
                     response_serializer=sd2026__pb2.RegisterResponse.SerializeToString,
+            ),
+            'Unregister': grpc.unary_unary_rpc_method_handler(
+                    servicer.Unregister,
+                    request_deserializer=sd2026__pb2.UnregisterRequest.FromString,
+                    response_serializer=sd2026__pb2.UnregisterResponse.SerializeToString,
             ),
             'Health': grpc.unary_unary_rpc_method_handler(
                     servicer.Health,
@@ -190,6 +206,33 @@ class RegistryService(object):
             '/sd2026.RegistryService/Register',
             sd2026__pb2.RegisterRequest.SerializeToString,
             sd2026__pb2.RegisterResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Unregister(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/sd2026.RegistryService/Unregister',
+            sd2026__pb2.UnregisterRequest.SerializeToString,
+            sd2026__pb2.UnregisterResponse.FromString,
             options,
             channel_credentials,
             insecure,

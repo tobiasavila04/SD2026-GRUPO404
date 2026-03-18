@@ -37,6 +37,15 @@ message RegisterRequest {
   int32  port = 2;
 }
 
+message UnregisterRequest {
+  string host = 1;
+  int32  port = 2;
+}
+
+message UnregisterResponse {
+  bool removed = 1;
+}
+
 message RegisterResponse {
   string            assigned_window = 1;
   repeated NodeInfo peers           = 2;
@@ -60,7 +69,8 @@ message NodesResponse {
 }
 
 service RegistryService {
-  rpc Register (RegisterRequest) returns (RegisterResponse);
-  rpc Health   (HealthRequest)  returns (HealthResponse);
-  rpc GetNodes (NodesRequest)   returns (NodesResponse);
+  rpc Register   (RegisterRequest)   returns (RegisterResponse);
+  rpc Unregister (UnregisterRequest) returns (UnregisterResponse);
+  rpc Health     (HealthRequest)     returns (HealthResponse);
+  rpc GetNodes   (NodesRequest)      returns (NodesResponse);
 }
